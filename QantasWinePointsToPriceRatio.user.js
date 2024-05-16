@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Qantas Wine Points-to-Price Ratio
 // @namespace    http://tampermonkey.net/
-// @version      2023-12-09
+// @version      2024-05-15
 // @description  Show points-to-price ratio on Qantas Wine website
-// @author       Codey Couture
+// @author       Rafael Uy (github.com/raffyuy)
 // @match        https://wine.qantas.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=qantas.com
-// @grant        none
+// @grant        window.onurlchange
 // @require      https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js
 // ==/UserScript==
 
@@ -18,12 +18,7 @@ $(document).off('DOMSubtreeModified');
     var lastProcessedUrl = '';  // Store the last URL processed
 
     function main() {
-        if ($("#__next").hasClass("processed")) {
-            console.log("Skipping execution because #__next is already processed.");
-            return;
-        }
-
-        console.log("Executing main functionality because URL contains 'BonusPoints'");
+        console.log("Executing main functionality");
 
         // Collect all product cards along with their ratios
         var productsWithRatios = [];
@@ -66,6 +61,7 @@ $(document).off('DOMSubtreeModified');
                 // Push to the array for sorting later
                 productsWithRatios.push({ element: productCard, ratio: ratio });
             }
+
         });
 
         // Sort product cards by the ratio
@@ -92,76 +88,33 @@ $(document).off('DOMSubtreeModified');
             });
         }
 
-        // Mark the #__next element as processed
-        $("#__next").addClass("processed");
-        lastProcessedUrl = window.location.href;  // Update the last processed URL
-
+        lock = false;
     }
 
-
-
-    // Check if 'BonusPoints' is in the URL and execute main if it is
-    function checkAndExecute() {
-        if (window.location.search.indexOf('BonusPoints') > -1 && (!$("#__next").hasClass("processed") || lastProcessedUrl !== window.location.href)) {
-            $("#__next").removeClass("processed");  // Remove processed class if URL has changed significantly
-            main();
-        } else {
-            console.log("URL does not contain 'BonusPoints' or has already been processed.");
-        }
-    }
-
-    function add_sorting_listener() {
-        var sortField = document.getElementById('sortField'); // Assuming this is the ID of your sorting button
-        function handleChange() {
-            console.log("Detected change in sorting option. Executing script...");
-            setTimeout(function() {
-                main();
-            }, 1000);
-        }
-        // Check initial state and setup observer if element exists
-        if (sortField) {
-            // Create an observer instance linked to the callback function
-            var observer = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
-                    if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
-                        console.log("Value changed to: ", sortField.getAttribute('value'));
-                        handleChange();
-                    }
-                });
-            });
-
-            // Configuration of the observer:
-            var config = { attributes: true, attributeOldValue: true };
-
-            // Start observing the target element for configured mutations
-            observer.observe(sortField, config);
-        } else {
-            console.warn('SortField element not found on the page.');
-        }
-    }
-
-    // Observer for DOM changes when going to new page
-    const observer = new MutationObserver(mutations => {
-        mutations.forEach(mutation => {
-            if ((mutation.type === 'childList' || mutation.type === 'attributes') &&
-                !$("#__next").hasClass("processed")) {
-                checkAndExecute();
-                add_sorting_listener();
+    // Function to detect when the page content has fully loaded
+    function waitForContentLoad(callback) {
+        console.log("waiting for content to load.")
+        const observer = new MutationObserver((mutations, obs) => {
+            if ($('span:contains("Earn"):contains("Bonus Points")').length > 0) {
+                obs.disconnect();  // Stop observing
+                console.log("content loaded, performing calculations...")
+                callback();
             }
         });
-    });
-
-    // Start observing the __next element for changes in the DOM
-    const config = { attributes: true, childList: true, subtree: true };
-    const targetNode = document.getElementById('__next');
-    if (targetNode) {
-        observer.observe(targetNode, config);
-    } else {
-        console.warn('The #__next element does not exist on the page.');
+        observer.observe(document, { childList: true, subtree: true });
     }
 
-    // Also run check on initial load
-    checkAndExecute();
 
+    var lock = false; // prevent from executing multiple times cause for some reason the url changes multiple times when navigating
+    if (window.onurlchange === null) {
+        window.addEventListener('urlchange', (info) => {
+            console.log('URL changed to: ' + info.url);
+            if (info.url.includes("BonusPoints") && !lock) {
+                console.log("Bonus points page detected")
+                waitForContentLoad(main); // Wait for content to load before executing main
+            }
+            lock = true;
+        });
+    }
 
 })();
