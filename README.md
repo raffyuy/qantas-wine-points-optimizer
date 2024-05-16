@@ -3,6 +3,7 @@
 This Tampermonkey script calculates the points to price ratio, displays it on the product card, and sorts them in descending order
 ![image](https://github.com/raffyuy/qantas-wine-points-optimizer/assets/51266174/054dd159-6e6c-401d-b4eb-7a5a59590464)
 
+I'm not much of a front-ender so not much thought on styling going on. 😅
 
 ## Installation
 
