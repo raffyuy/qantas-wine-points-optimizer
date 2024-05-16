@@ -1,4 +1,3 @@
-# qantas-wine-points-optimizer
 # Qantas Wine Points-to-Price Ratio
 
 This Tampermonkey script calculates the points to price ratio, displays it on the product card, and sorts them in descending order
